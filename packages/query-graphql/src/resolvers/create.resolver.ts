@@ -47,7 +47,15 @@ export interface CreateResolver<DTO, C, QS extends QueryService<DTO, C, unknown>
 
   createMany(input: MutationArgsType<CreateManyInputType<C>>): Promise<DTO[]>;
 
-  createdSubscription(input?: SubscriptionArgsType<DTO>): AsyncIterator<CreatedEvent<DTO>>;
+  createdOneSubscription(
+    input?: SubscriptionArgsType<DTO>,
+    authorizeFilter?: Filter<DTO>,
+  ): AsyncIterator<CreatedEvent<DTO>>;
+
+  createdManySubscription(
+    input?: SubscriptionArgsType<DTO>,
+    authorizeFilter?: Filter<DTO>,
+  ): AsyncIterator<CreatedEvent<DTO>>;
 }
 
 /** @internal */
@@ -209,7 +217,7 @@ export const Creatable = <DTO, C, QS extends QueryService<DTO, C, unknown>>(
         many: false,
       })
       authorizeFilter?: Filter<DTO>,
-    ): AsyncIterator<CreatedEvent<DTO>> | void {
+    ): AsyncIterator<CreatedEvent<DTO>> {
       if (!this.pubSub || !enableOneSubscriptions) {
         throw new Error(`Unable to subscribe to ${createdOneEvent}`);
       }
@@ -231,7 +239,7 @@ export const Creatable = <DTO, C, QS extends QueryService<DTO, C, unknown>>(
         many: false,
       })
       authorizeFilter?: Filter<DTO>,
-    ): AsyncIterator<CreatedEvent<DTO>> | void {
+    ): AsyncIterator<CreatedEvent<DTO>> {
       if (!this.pubSub || !enableManySubscriptions) {
         throw new Error(`Unable to subscribe to ${createdManyEvent}`);
       }

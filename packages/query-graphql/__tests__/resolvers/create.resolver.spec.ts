@@ -150,7 +150,7 @@ describe('CreateResolver', () => {
           id: 'id-1',
           stringField: 'foo',
         };
-        const eventName = getDTOEventName(EventType.CREATED, TestResolverDTO);
+        const eventName = getDTOEventName(EventType.CREATED_ONE, TestResolverDTO);
         const event = { [eventName]: output };
         when(mockService.createOne(objectContaining(args.input))).thenResolve(output);
         when(mockPubSub.publish(eventName, deepEqual(event))).thenResolve();
@@ -170,7 +170,7 @@ describe('CreateResolver', () => {
           id: 'id-1',
           stringField: 'foo',
         };
-        const eventName = getDTOEventName(EventType.CREATED, TestResolverDTO);
+        const eventName = getDTOEventName(EventType.CREATED_ONE, TestResolverDTO);
         const event = { [eventName]: output };
         when(mockService.createOne(objectContaining(args.input))).thenResolve(output);
         when(mockPubSub.publish(eventName, deepEqual(event))).thenResolve();
@@ -233,7 +233,7 @@ describe('CreateResolver', () => {
             stringField: 'foo',
           },
         ];
-        const eventName = getDTOEventName(EventType.CREATED, TestResolverDTO);
+        const eventName = getDTOEventName(EventType.CREATED_ONE, TestResolverDTO);
         const events = output.map((o) => ({ [eventName]: o }));
         when(mockService.createMany(objectContaining(args.input))).thenResolve(output);
         events.forEach((e) => when(mockPubSub.publish(eventName, deepEqual(e))).thenResolve());
@@ -257,7 +257,7 @@ describe('CreateResolver', () => {
             stringField: 'foo',
           },
         ];
-        const eventName = getDTOEventName(EventType.CREATED, TestResolverDTO);
+        const eventName = getDTOEventName(EventType.CREATED_ONE, TestResolverDTO);
         const events = output.map((o) => ({ [eventName]: o }));
         when(mockService.createMany(objectContaining(args.input))).thenResolve(output);
         events.forEach((e) => when(mockPubSub.publish(eventName, deepEqual(e))).thenResolve());
@@ -317,7 +317,7 @@ describe('CreateResolver', () => {
         const { resolver, mockPubSub } = await createTestResolver({
           enableSubscriptions: true,
         });
-        const eventName = getDTOEventName(EventType.CREATED, TestResolverDTO);
+        const eventName = getDTOEventName(EventType.CREATED_ONE, TestResolverDTO);
 
         const event: CreatedEvent<TestResolverDTO> = {
           [eventName]: {
@@ -328,7 +328,7 @@ describe('CreateResolver', () => {
         const mockIterator = mock<AsyncIterator<CreatedEvent<TestResolverDTO>>>();
         when(mockPubSub.asyncIterator(eventName)).thenReturn(instance(mockIterator));
         when(mockIterator.next()).thenResolve({ done: false, value: event });
-        const result = await resolver.createdSubscription().next();
+        const result = await resolver.createdOneSubscription().next();
         verify(mockPubSub.asyncIterator(eventName)).once();
         return expect(result).toEqual({
           done: false,
@@ -340,8 +340,8 @@ describe('CreateResolver', () => {
         const { resolver } = await createTestResolver({
           enableSubscriptions: false,
         });
-        const eventName = getDTOEventName(EventType.CREATED, TestResolverDTO);
-        return expect(() => resolver.createdSubscription()).toThrow(`Unable to subscribe to ${eventName}`);
+        const eventName = getDTOEventName(EventType.CREATED_ONE, TestResolverDTO);
+        return expect(() => resolver.createdOneSubscription()).toThrow(`Unable to subscribe to ${eventName}`);
       });
     });
   });
