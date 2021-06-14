@@ -235,6 +235,7 @@ export const Creatable = <DTO, C, QS extends QueryService<DTO, C, unknown>>(
       if (!this.pubSub || !enableManySubscriptions) {
         throw new Error(`Unable to subscribe to ${createdManyEvent}`);
       }
+
       const eventName =
         authorizeFilter != null ? getUniqueNameForEvent(createdManyEvent, authorizeFilter) : createdManyEvent;
       return this.pubSub.asyncIterator<CreatedEvent<DTO>>(eventName);
