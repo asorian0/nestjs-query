@@ -6,7 +6,8 @@ import { GraphQLPubSub } from './pub-sub.interface';
 export { GraphQLPubSub } from './pub-sub.interface';
 
 export enum EventType {
-  CREATED = 'created',
+  CREATED_ONE = 'createdOne',
+  CREATED_MANY = 'createdMany',
   UPDATED_ONE = 'updatedOne',
   UPDATED_MANY = 'updatedMany',
   DELETED_ONE = 'deletedOne',

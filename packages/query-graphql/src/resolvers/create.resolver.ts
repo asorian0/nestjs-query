@@ -89,7 +89,8 @@ export const Creatable = <DTO, C, QS extends QueryService<DTO, C, unknown>>(
   const enableSubscriptions = opts.enableSubscriptions === true;
   const enableOneSubscriptions = opts.one?.enableSubscriptions ?? enableSubscriptions;
   const enableManySubscriptions = opts.many?.enableSubscriptions ?? enableSubscriptions;
-  const createdEvent = getDTOEventName(EventType.CREATED, DTOClass);
+  const createdOneEvent = getDTOEventName(EventType.CREATED_ONE, DTOClass);
+  const createdManyEvent = getDTOEventName(EventType.CREATED_MANY, DTOClass);
   const {
     CreateDTOClass = defaultCreateDTO(dtoNames, DTOClass),
     CreateOneInput = defaultCreateOneInput(dtoNames, CreateDTOClass),
@@ -120,7 +121,7 @@ export const Creatable = <DTO, C, QS extends QueryService<DTO, C, unknown>>(
   class SA extends SubscriptionArgsType(SI) {}
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const subscriptionFilter = createSubscriptionFilter(SI, createdEvent);
+  const subscriptionFilter = createSubscriptionFilter(SI, createdOneEvent);
 
   @Resolver(() => DTOClass, { isAbstract: true })
   class CreateResolverBase extends BaseClass {
@@ -147,7 +148,7 @@ export const Creatable = <DTO, C, QS extends QueryService<DTO, C, unknown>>(
       // Ignore `authorizeFilter` for now but give users the ability to throw an UnauthorizedException
       const created = await this.service.createOne(input.input.input);
       if (enableOneSubscriptions) {
-        await this.publishCreatedEvent(created, authorizeFilter);
+        await this.publishCreatedOneEvent(created, authorizeFilter);
       }
       return created;
     }
@@ -166,7 +167,6 @@ export const Creatable = <DTO, C, QS extends QueryService<DTO, C, unknown>>(
     )
     async createMany(
       @MutationHookArgs() input: CM,
-
       @AuthorizerFilter({
         operationGroup: OperationGroup.CREATE,
         many: true,
@@ -176,24 +176,32 @@ export const Creatable = <DTO, C, QS extends QueryService<DTO, C, unknown>>(
       // Ignore `authorizeFilter` for now but give users the ability to throw an UnauthorizedException
       const created = await this.service.createMany(input.input.input);
       if (enableManySubscriptions) {
-        await Promise.all(created.map((c) => this.publishCreatedEvent(c, authorizeFilter)));
+        await Promise.all(created.map((c) => this.publishCreatedManyEvent(c, authorizeFilter)));
       }
       return created;
     }
 
-    async publishCreatedEvent(dto: DTO, authorizeFilter?: Filter<DTO>): Promise<void> {
+    async publishCreatedOneEvent(dto: DTO, authorizeFilter?: Filter<DTO>): Promise<void> {
       if (this.pubSub) {
-        const eventName = authorizeFilter != null ? getUniqueNameForEvent(createdEvent, authorizeFilter) : createdEvent;
-        await this.pubSub.publish(eventName, { [createdEvent]: dto });
+        const eventName =
+          authorizeFilter != null ? getUniqueNameForEvent(createdOneEvent, authorizeFilter) : createdOneEvent;
+        await this.pubSub.publish(eventName, { [createdOneEvent]: dto });
       }
     }
 
-    @ResolverSubscription(() => DTOClass, { name: createdEvent, filter: subscriptionFilter }, commonResolverOpts, {
-      enableSubscriptions: enableOneSubscriptions || enableManySubscriptions,
+    async publishCreatedManyEvent(dto: DTO, authorizeFilter?: Filter<DTO>): Promise<void> {
+      if (this.pubSub) {
+        const eventName =
+          authorizeFilter != null ? getUniqueNameForEvent(createdManyEvent, authorizeFilter) : createdManyEvent;
+        await this.pubSub.publish(eventName, { [createdManyEvent]: dto });
+      }
+    }
+
+    @ResolverSubscription(() => DTOClass, { name: createdOneEvent, filter: subscriptionFilter }, commonResolverOpts, {
+      enableSubscriptions: enableOneSubscriptions,
       interceptors: [AuthorizerInterceptor(DTOClass)],
     })
-
-    createdSubscription(
+    createdOneSubscription(
       @Args() input?: SA,
       @AuthorizerFilter({
         operationGroup: OperationGroup.CREATE,
@@ -202,14 +210,37 @@ export const Creatable = <DTO, C, QS extends QueryService<DTO, C, unknown>>(
       })
       authorizeFilter?: Filter<DTO>,
     ): AsyncIterator<CreatedEvent<DTO>> | void {
-      if (!this.pubSub || !(enableManySubscriptions || enableOneSubscriptions)) {
-        throw new Error(`Unable to subscribe to ${createdEvent}`);
+      if (!this.pubSub || !enableOneSubscriptions) {
+        throw new Error(`Unable to subscribe to ${createdOneEvent}`);
       }
 
-      const eventName = authorizeFilter != null ? getUniqueNameForEvent(createdEvent, authorizeFilter) : createdEvent;
+      const eventName =
+        authorizeFilter != null ? getUniqueNameForEvent(createdOneEvent, authorizeFilter) : createdOneEvent;
+      return this.pubSub.asyncIterator<CreatedEvent<DTO>>(eventName);
+    }
+
+    @ResolverSubscription(() => DTOClass, { name: createdManyEvent, filter: subscriptionFilter }, commonResolverOpts, {
+      enableSubscriptions: enableManySubscriptions,
+      interceptors: [AuthorizerInterceptor(DTOClass)],
+    })
+    createdManySubscription(
+      @Args() input?: SA,
+      @AuthorizerFilter({
+        operationGroup: OperationGroup.CREATE,
+        operationName: 'onCreateOne',
+        many: false,
+      })
+      authorizeFilter?: Filter<DTO>,
+    ): AsyncIterator<CreatedEvent<DTO>> | void {
+      if (!this.pubSub || !enableManySubscriptions) {
+        throw new Error(`Unable to subscribe to ${createdManyEvent}`);
+      }
+      const eventName =
+        authorizeFilter != null ? getUniqueNameForEvent(createdManyEvent, authorizeFilter) : createdManyEvent;
       return this.pubSub.asyncIterator<CreatedEvent<DTO>>(eventName);
     }
   }
+
   return CreateResolverBase;
 };
 
